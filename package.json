@@ -1,15 +1,8 @@
 {
-  "name": "vdom",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "vite": "^6.0.11"
-  }
+  "name": "virtual-dom-barebone",
+  "packageManager": "yarn@4.1.1",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
 }
