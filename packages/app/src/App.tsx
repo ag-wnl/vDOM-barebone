@@ -12,14 +12,15 @@ const button = Button({ number: 0 });
 
 function App() {
   const [count, setCount] = useState(0);
-
   const buttonContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    button.mount(buttonContainerRef.current);
+  }, []);
+
+  useEffect(() => {
     if (buttonContainerRef.current) {
-      // Create the button and mount it to the container
-      const button = Button({ number: count });
-      button.mount(buttonContainerRef.current);
+      button.patch(Button({ number: count }));
     }
   }, [count]);
 

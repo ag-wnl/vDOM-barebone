@@ -6,6 +6,12 @@ import { Block, Edit, Props, VElement, VNode } from "./types";
 
 // Helper function to create virtual dom nodes
 // e.g. h('div', { id: 'foo' }, 'hello') => <div id="foo">hello</div>
+
+// console.log(h("div", { id: "foo" }, "hello"));
+// gives us { type: 'div', props: { id: 'foo' }, children: ['hello'] }
+
+// console.log(h("div", { id: "foo" }, h("span", {}, "hello")));
+// gives us { type: 'div', props: { id: 'foo' }, children: [{ type: 'span', props: null, children: ['hello'] }] }
 export const h = (
   type: string,
   props: Props = {},
@@ -15,12 +21,6 @@ export const h = (
   props,
   children,
 });
-
-// console.log(h("div", { id: "foo" }, "hello"));
-// gives us { type: 'div', props: { id: 'foo' }, children: ['hello'] }
-
-// console.log(h("div", { id: "foo" }, h("span", {}, "hello")));
-// gives us { type: 'div', props: { id: 'foo' }, children: [{ type: 'span', props: null, children: ['hello'] }] }
 
 /**
  * @description Hole is a placeholder for a value that will be filled in later
@@ -61,7 +61,6 @@ export const block = (fn: (props: Props) => VNode) => {
   // edits is a mutable array, so we pass it by reference
   const edits: Edit[] = [];
   // by rendering the vnode, we also populate the edits array
-  // by parsing the vnode for Hole placeholders
   const root = render(vnode, edits);
 
   // factory function to create instances of this block
@@ -80,10 +79,16 @@ export const block = (fn: (props: Props) => VNode) => {
 
       for (let i = 0; i < edits.length; i++) {
         const edit = edits[i];
-        // walk the tree to find the element / hole
+
+        /**
+         * Now we will be walking the tree to find the element / hole
+         * Ex: If path = [1, 2, 3]
+         * thisEl = el.childNodes[1].childNodes[2].childNodes[3]
+         *
+         * We start with thisEl = el, as the element is the root parent and
+         * then we walk the tree using the path to reach the element
+         */
         let thisEl = el;
-        // If path = [1, 2, 3]
-        // thisEl = el.childNodes[1].childNodes[2].childNodes[3]
         for (let i = 0; i < edit.path.length; i++) {
           thisEl = thisEl.childNodes[edit.path[i]];
         }
@@ -98,14 +103,14 @@ export const block = (fn: (props: Props) => VNode) => {
           // @ts-ignore
           thisEl[edit.attribute] = value;
         } else if (edit.type === "child") {
-          // handle nested blocks if the value is a block
+          // if the value is a block, mount it (this means we have a nested block)
           if (value.mount && typeof value.mount === "function") {
             value.mount(thisEl);
-            continue;
+          } else {
+            // else insert a text node at the specified index
+            const textNode = document.createTextNode(value);
+            thisEl.insertBefore(textNode, thisEl.childNodes[edit.index]);
           }
-
-          const textNode = document.createTextNode(value);
-          thisEl.insertBefore(textNode, thisEl.childNodes[edit.index]);
         }
       }
     };
@@ -127,11 +132,11 @@ export const block = (fn: (props: Props) => VNode) => {
         } else if (edit.type === "child") {
           // handle nested blocks if the value is a block
           if (value.patch && typeof value.patch === "function") {
-            // patch cooresponding child blocks
+            // patch corresponding child blocks
             value.patch(newBlock.edits[i].hole);
-            continue;
+          } else {
+            thisEl.childNodes[edit.index].textContent = newValue;
           }
-          thisEl.childNodes[edit.index].textContent = newValue;
         }
       }
     };
@@ -151,6 +156,22 @@ export const block = (fn: (props: Props) => VNode) => {
  * @param edits : list of edits to be made to the dom. Edit represents a mapping between a hole and the value
  * each Edit has data where the relevant DOM node is in the tree, key to access the props via hole
  * and property name we wan to update (via name if it's an attribute, or index if it's a child)
+ *  
+ * Ex of edits:
+ * [
+  {
+    type: 'attribute',
+    path: [0, 1], // Path to the element
+    attribute: 'class', // Attribute to update
+    hole: 'className', // Key to look up the value in props
+  },
+  {
+    type: 'child',
+    path: [0], // Path to the parent element
+    index: 2, // Position of the child in the parent
+    hole: 'text', // Key to look up the value in props
+  },
+  ]
  *
  * @returns HTMLElement | Text
  */
@@ -164,12 +185,21 @@ export const render = (
   //    passes in an empty array and uses that as a reference
   //    for the edits.
   edits: Edit[] = [],
-  // Path is used to keep track of where we are in the tree
-  // as we traverse it.
-  // e.g. [0, 1, 2] would mean:
-  //    el1 = 1st child of el
-  //    el2 = 2nd child of el1
-  //    el3 = 3rd child of el2
+  /**
+   * Path is used to keep track of where we are in the tree.
+   * An array of indices that represents the position of an element in the DOM tree.
+   *
+   * For example, [0, 1, 2] means:
+   * - Start at the root element
+   * - Go to the 1st child (index 0)
+   * - Go to the 2nd child of that child (index 1)
+   * - Go to the 3rd child of that child (index 2)
+   *
+   * e.g. [0, 1, 2] would mean:
+   *    el1 = 1st child of el
+   *    el2 = 2nd child of el1
+   *    el3 = 3rd child of el2
+   */
   path: number[] = []
 ): HTMLElement | Text => {
   if (typeof vnode === "string") return document.createTextNode(vnode);
@@ -182,30 +212,31 @@ export const render = (
       if (value instanceof Hole) {
         edits.push({
           type: "attribute",
-          path, // the path we need to traverse to get to the element
-          attribute: name, // to set the value during mount/patch
-          hole: value.key, // to get the value from props during mount/patch
+          path, // path to the element
+          attribute: name, // attribute to update during mount/patch
+          hole: value.key, // key to look up the value in props during mount/patch
         });
-        continue;
+      } else {
+        // @ts-ignore
+        el[name] = value; // set the attribute directly if it's not a Hole
       }
-      // @ts-ignore
-      el[name] = value;
     }
   }
 
   for (let i = 0; i < vnode.children?.length; i++) {
     const child = vnode.children[i];
     if (child instanceof Hole) {
+      // mark the child as a hole so in future we can dynamically insert/update the child
       edits.push({
         type: "child",
-        path, // the path we need to traverse to get to the parent element
-        index: i, // index represents the position of the child in the parent used to insert/update the child during mount/patch
-        hole: child.key, // to get the value from props during mount/patch
+        path, // path to the parent element
+        index: i, // index represents the position of the child in the parent. Used to insert/update the child during mount/patch
+        hole: child.key, // key to look up the value in props during mount/patch
       });
-      continue;
+    } else {
+      // we respread the path to avoid mutating the original array
+      el.appendChild(render(child, edits, [...path, i]));
     }
-    // we respread the path to avoid mutating the original array
-    el.appendChild(render(child, edits, [...path, i]));
   }
 
   return el;
