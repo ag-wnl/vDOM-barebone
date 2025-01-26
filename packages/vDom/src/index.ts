@@ -68,6 +68,7 @@ export const block = (fn: (props: Props) => VNode) => {
     // elements stores the element references for each edit
     // during mount, which can be used during patch later
     const elements = new Array(edits.length);
+    const eventListeners = new Map<string, Function>();
 
     // mount puts the element for the block on some parent element
     const mount = (parent: HTMLElement) => {
@@ -100,8 +101,19 @@ export const block = (fn: (props: Props) => VNode) => {
         const value = props[edit.hole];
 
         if (edit.type === "attribute") {
-          // @ts-ignore
-          thisEl[edit.attribute] = value;
+          if (edit.attribute.startsWith("on")) {
+            const eventName = edit.attribute.slice(2).toLowerCase();
+            const handler =
+              typeof value === "function" ? value : (props[value] as Function);
+
+            if (handler) {
+              thisEl.addEventListener(eventName, handler);
+              eventListeners.set(eventName, handler);
+            }
+          } else {
+            // @ts-ignore
+            thisEl[edit.attribute] = value;
+          }
         } else if (edit.type === "child") {
           // if the value is a block, mount it (this means we have a nested block)
           if (value.mount && typeof value.mount === "function") {
@@ -115,27 +127,48 @@ export const block = (fn: (props: Props) => VNode) => {
       }
     };
 
-    // patch updates the element references with new values
     const patch = (newBlock: Block) => {
       for (let i = 0; i < edits.length; i++) {
         const edit = edits[i];
-        const value = props[edit.hole];
+
+        const currentValue = props[edit.hole];
         const newValue = newBlock.props[edit.hole];
 
-        // dirty check
-        if (value === newValue) continue;
+        if (currentValue === newValue) continue;
 
         const thisEl = elements[i];
 
         if (edit.type === "attribute") {
-          thisEl[edit.attribute] = newValue;
-        } else if (edit.type === "child") {
-          // handle nested blocks if the value is a block
-          if (value.patch && typeof value.patch === "function") {
-            // patch corresponding child blocks
-            value.patch(newBlock.edits[i].hole);
+          if (edit.attribute.startsWith("on")) {
+            const eventName = edit.attribute.slice(2).toLowerCase();
+
+            const oldHandler = eventListeners.get(eventName);
+            const newHandler =
+              typeof newValue === "function"
+                ? newValue
+                : (newBlock.props[newValue] as Function);
+
+            if (oldHandler) {
+              thisEl.removeEventListener(eventName, oldHandler);
+              eventListeners.delete(eventName);
+            }
+
+            if (newHandler) {
+              thisEl.addEventListener(eventName, newHandler);
+              eventListeners.set(eventName, newHandler);
+            }
           } else {
-            thisEl.childNodes[edit.index].textContent = newValue;
+            thisEl[edit.attribute] = newValue;
+          }
+        } else if (edit.type === "child") {
+          if (
+            currentValue &&
+            typeof currentValue === "object" &&
+            currentValue.patch
+          ) {
+            currentValue.patch(newBlock.edits[i].hole);
+          } else {
+            thisEl.childNodes[edit.index].textContent = String(newValue);
           }
         }
       }
@@ -209,6 +242,32 @@ export const render = (
   if (vnode.props) {
     for (const name in vnode.props) {
       const value = vnode.props[name];
+
+      // handle event listeners
+      // handle event listeners differently
+      if (name.startsWith("on")) {
+        if (value instanceof Hole) {
+          edits.push({
+            type: "attribute",
+            path,
+            attribute: name,
+            hole: value.key,
+          });
+        } else if (typeof value === "function") {
+          // Preserve function reference in edits
+          edits.push({
+            type: "attribute",
+            path,
+            attribute: name,
+            hole: value,
+          });
+
+          const eventName = name.slice(2).toLowerCase();
+          el.addEventListener(eventName, value);
+        }
+        continue;
+      }
+
       if (value instanceof Hole) {
         edits.push({
           type: "attribute",

@@ -51,6 +51,22 @@ declare const block: (fn: (props: Props) => VNode) => (props: Props) => Block;
  * each Edit has data where the relevant DOM node is in the tree, key to access the props via hole
  * and property name we wan to update (via name if it's an attribute, or index if it's a child)
  *
+ * Ex of edits:
+ * [
+  {
+    type: 'attribute',
+    path: [0, 1], // Path to the element
+    attribute: 'class', // Attribute to update
+    hole: 'className', // Key to look up the value in props
+  },
+  {
+    type: 'child',
+    path: [0], // Path to the parent element
+    index: 2, // Position of the child in the parent
+    hole: 'text', // Key to look up the value in props
+  },
+  ]
+ *
  * @returns HTMLElement | Text
  */
 declare const render: (vnode: VNode, edits?: Edit[], path?: number[]) => HTMLElement | Text;
