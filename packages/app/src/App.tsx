@@ -4,23 +4,32 @@ import viteLogo from "/vite.svg";
 import "./App.css";
 import { h, block } from "vdom";
 
-const Button = block(({ number }: { number: number }) => {
-  return h("button", null, number);
-});
-
-const button = Button({ number: 0 });
+const Button = block(
+  ({ number, onClick }: { number: number; onClick: () => void }) =>
+    h("button", { onClick }, number)
+);
 
 function App() {
   const [count, setCount] = useState(0);
-  const buttonContainerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const buttonInstanceRef = useRef<ReturnType<typeof Button> | null>(null);
+
+  const createButtonInstance = () =>
+    Button({
+      number: count,
+      onClick: () => setCount((prev) => prev + 1),
+    });
 
   useEffect(() => {
-    button.mount(buttonContainerRef.current);
+    if (buttonRef.current) {
+      buttonInstanceRef.current = createButtonInstance();
+      buttonInstanceRef.current.mount(buttonRef.current);
+    }
   }, []);
 
   useEffect(() => {
-    if (buttonContainerRef.current) {
-      button.patch(Button({ number: count }));
+    if (buttonInstanceRef.current) {
+      buttonInstanceRef.current.patch(createButtonInstance());
     }
   }, [count]);
 
@@ -36,10 +45,7 @@ function App() {
       </div>
       <h1>Vite + React</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <div ref={buttonContainerRef}></div>
+        <div ref={buttonRef}></div>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
