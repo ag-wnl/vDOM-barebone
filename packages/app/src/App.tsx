@@ -1,10 +1,27 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useRef, useEffect } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "/vite.svg";
+import "./App.css";
+import { h, block } from "vdom";
+
+const Button = block(({ number }: { number: number }) => {
+  return h("button", null, number);
+});
+
+const button = Button({ number: 0 });
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
+
+  const buttonContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (buttonContainerRef.current) {
+      // Create the button and mount it to the container
+      const button = Button({ number: count });
+      button.mount(buttonContainerRef.current);
+    }
+  }, [count]);
 
   return (
     <>
@@ -21,6 +38,7 @@ function App() {
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
         </button>
+        <div ref={buttonContainerRef}></div>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
@@ -29,7 +47,7 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

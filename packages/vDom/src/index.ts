@@ -95,6 +95,7 @@ export const block = (fn: (props: Props) => VNode) => {
         const value = props[edit.hole];
 
         if (edit.type === "attribute") {
+          // @ts-ignore
           thisEl[edit.attribute] = value;
         } else if (edit.type === "child") {
           // handle nested blocks if the value is a block
@@ -187,6 +188,7 @@ export const render = (
         });
         continue;
       }
+      // @ts-ignore
       el[name] = value;
     }
   }

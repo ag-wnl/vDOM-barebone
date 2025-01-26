@@ -1063,6 +1063,7 @@ __metadata:
     react-dom: "npm:^18.3.1"
     typescript: "npm:~5.6.2"
     typescript-eslint: "npm:^8.18.2"
+    vdom: "npm:1.0.0"
     vite: "npm:^6.0.5"
   languageName: unknown
   linkType: soft
@@ -2926,7 +2927,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsup@npm:^8.3.6":
+"tsup@npm:^8.0.0":
   version: 8.3.6
   resolution: "tsup@npm:8.3.6"
   dependencies:
@@ -2990,7 +2991,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.7.3":
+"typescript@npm:^5.0.0":
   version: 5.7.3
   resolution: "typescript@npm:5.7.3"
   bin:
@@ -3010,7 +3011,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5.0.0#optional!builtin<compat/typescript>":
   version: 5.7.3
   resolution: "typescript@patch:typescript@npm%3A5.7.3#optional!builtin<compat/typescript>::version=5.7.3&hash=5adc0c"
   bin:
@@ -3071,12 +3072,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vdom@workspace:packages/vDom":
+"vdom@npm:1.0.0, vdom@workspace:packages/vDom":
   version: 0.0.0-use.local
   resolution: "vdom@workspace:packages/vDom"
   dependencies:
-    tsup: "npm:^8.3.6"
-    typescript: "npm:^5.7.3"
+    tsup: "npm:^8.0.0"
+    typescript: "npm:^5.0.0"
   languageName: unknown
   linkType: soft
 
